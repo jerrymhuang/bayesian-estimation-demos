@@ -1,13 +1,7 @@
 /* Dependency-free statistical routines, shared by the browser and Node checks. */
 (function(root) {
 'use strict';
-const {logGamma,beta,pdf,cdf,quantile,integrate}=typeof module!=='undefined'?require('../../shared/beta.js'):root.BetaMath;
-function probability(A,B,k){return Math.max(0,Math.min(1,integrate(b=>pdf(b,B)*cdf(b/k,A),0,1)));}
-function density(A,B,k){
- const lo=quantile(.0005,B)-k*quantile(.9995,A),hi=quantile(.9995,B)-k*quantile(.0005,A);
- const xs=Array.from({length:241},(_,i)=>lo+(hi-lo)*i/240);if(lo<0&&hi>0)xs.push(0);xs.sort((a,b)=>a-b);
- return xs.map(x=>[x,integrate(b=>pdf(b,B)*pdf((b-x)/k,A)/k,Math.max(0,x),Math.min(1,k+x),1024)]);
-}
+const {logGamma}=typeof module!=='undefined'?require('../../shared/beta.js'):root.BetaMath;
 function erfc(x){const z=Math.abs(x),t=1/(1+.5*z);const r=t*Math.exp(-z*z-1.26551223+t*(1.00002368+t*(.37409196+t*(.09678418+t*(-.18628806+t*(.27886807+t*(-1.13520398+t*(1.48851587+t*(-.82215223+t*.17087277)))))))));return x>=0?r:2-r;}
 function logChoose(n,k){return logGamma(n+1)-logGamma(k+1)-logGamma(n-k+1);}
 function frequentist(nA,yA,nB,yB){
@@ -23,5 +17,5 @@ function frequentist(nA,yA,nB,yB){
  let z=null;if(cells.every(x=>x>0))z=(Math.log(yB/(nB-yB))-Math.log(yA/(nA-yA)))/Math.sqrt(cells.reduce((v,x)=>v+1/x,0));
  return {chi,corrected,exact,correctedP:corrected===null?null:erfc(Math.sqrt(corrected/2)),z,logisticP:z===null?null:erfc(Math.abs(z)/Math.SQRT2),warn};
 }
-const api={beta,pdf,cdf,quantile,integrate,probability,density,frequentist};if(typeof module!=='undefined')module.exports=api;root.AchooStats=api;
+const api={frequentist};if(typeof module!=='undefined')module.exports=api;root.AchooStats=api;
 })(globalThis);

@@ -11,16 +11,13 @@ const rows=execFileSync('Rscript',['-e',`
 options(digits=17)
 for(v in list(${cases.map(v=>'c('+v.join(',')+')').join(',')})) {
  nA=v[1];yA=v[2];nB=v[3];yB=v[4];k=v[5]
- p=integrate(function(b) dbeta(b,yB+1,nB-yB+1)*pbeta(b/k,yA+1,nA-yA+1),0,1,rel.tol=1e-10,subdivisions=1000)$value
  d=matrix(c(yA,nA-yA,yB,nB-yB),2,byrow=T)
  chi=suppressWarnings(chisq.test(d,correct=T))$p.value
  z=if(all(d>0)) {fit=glm(cbind(c(yA,yB),c(nA-yA,nB-yB))~c(0,1),family=binomial());coef(summary(fit))[2,4]} else NA
- cat(p,qbeta(.025,yA+1,nA-yA+1),chi,z,"\\n")
+ cat(chi,z,"\\n")
 }`],{encoding:'utf8'}).trim().split('\n').map(x=>x.trim().split(/\s+/).map(Number));
-cases.forEach(([nA,yA,nB,yB,k],i)=>{const A=S.beta(yA+1,nA-yA+1),B=S.beta(yB+1,nB-yB+1),f=S.frequentist(nA,yA,nB,yB),[p,q,chi,z]=rows[i];close(S.probability(A,B,k),p,1e-5);close(S.quantile(.025,A),q,1e-9);if(Number.isFinite(chi))close(f.correctedP,chi);if(Number.isFinite(z))close(f.logisticP,z);assert.ok(S.density(A,B,k).every(([x,y])=>Number.isFinite(x)&&Number.isFinite(y)&&y>=0));});
+cases.forEach(([nA,yA,nB,yB],i)=>{const f=S.frequentist(nA,yA,nB,yB),[chi,z]=rows[i];if(Number.isFinite(chi))close(f.correctedP,chi);if(Number.isFinite(z))close(f.logisticP,z);});
 close(S.frequentist(30,1,10,3).exact, .0416894627420943,1e-12);
-close(S.probability(S.beta(2,30),S.beta(4,8),1),.9874310541833005);
-assert.ok(S.probability(S.beta(2,30),S.beta(4,8),5)<S.probability(S.beta(2,30),S.beta(4,8),1));
 // Exercise the actual DOM event handlers, including validation and resizing.
 const elements={};for(const match of fs.readFileSync(require.resolve('../index.html'),'utf8').matchAll(/id="([^"]+)"/g))elements[match[1]]={value:'',innerHTML:'',textContent:'',handlers:{},addEventListener(name,fn){this.handlers[name]=fn;}};
 let queued;const context={AchooStats:S,AchooBrms:Brms,document:{getElementById:id=>{assert.ok(elements[id],id);return elements[id];}},requestAnimationFrame:fn=>{queued=fn;return 1;},cancelAnimationFrame(){}};
@@ -52,9 +49,14 @@ for(const k of [1,5]){
  for(let i=1;i<points.length;i++){const mass=(points[i][0]-points[i-1][0])*(points[i][1]+points[i-1][1])/2;area+=mass;if(points[i-1][0]>=0)positive+=mass;}
  close(area,1,1e-4);close(positive,fitted.probability(k),1e-4);
 }
-event('reset','click','');const testTable=elements.tests.innerHTML;
-event('model','change','brms');assert.equal(elements['answer-times'].textContent,'70.1%');assert.equal(elements.tests.innerHTML,testTable);assert.ok(elements['summary-heading'].textContent.startsWith('brms'));assert.ok(elements['difference-plot'].innerHTML.includes('stroke-dasharray="7 4"'));
-event('yA','change','0');event('yB','change','10');assert.equal(elements['answer-times'].textContent,'Unavailable');assert.ok(elements['brms-note'].textContent.includes('improper posterior'));
-event('model','change','mackay');assert.notEqual(elements['answer-times'].textContent,'Unavailable');
-event('reset','click','');event('nA','change','1');event('yA','change','0');event('nB','change','999');event('yB','change','500');event('model','change','brms');assert.equal(elements['answer-times'].textContent,'Unavailable');assert.ok(elements['brms-note'].textContent.includes('too diffuse'));
-console.log('PASS: R reference comparisons, edge cases, chart coordinates, and UI event checks.');
+event('reset','click','');
+assert.equal(elements['answer-times'].textContent,'70.1%');
+assert.equal(elements.model,undefined);assert.equal(elements['prior-comparison'],undefined);
+assert.ok(elements['difference-plot'].innerHTML.includes('<svg'));
+assert.ok(!elements['difference-plot'].innerHTML.includes('stroke-dasharray="7 4"'));
+assert.ok(elements.counts.innerHTML.includes('4.4%'));assert.ok(elements.counts.innerHTML.includes('31.0%'));
+event('yA','change','0');assert.notEqual(elements['answer-times'].textContent,'Unavailable');assert.ok(elements['difference-plot'].textContent.includes('omitted'));
+event('yB','change','10');assert.equal(elements['answer-times'].textContent,'Unavailable');assert.ok(elements['brms-note'].textContent.includes('improper posterior'));assert.ok(elements['difference-plot'].textContent.includes('unavailable'));
+event('reset','click','');assert.equal(elements['answer-times'].textContent,'70.1%');assert.equal(elements['brms-note'].textContent,'');
+event('nA','change','1');event('yA','change','0');event('nB','change','999');event('yB','change','500');assert.equal(elements['answer-times'].textContent,'Unavailable');assert.ok(elements['brms-note'].textContent.includes('too diffuse'));
+console.log('PASS: R reference comparisons, brms-only summaries and plots, input controls, and unavailable posterior states.');

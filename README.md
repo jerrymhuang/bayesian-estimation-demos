@@ -16,7 +16,7 @@ Then visit http://localhost:8000.
 
 | Demo | Status | Files |
 | --- | --- | --- |
-| **Achoo!** — disease problem, frequentist tests, and Bayesian prior comparison | Ready | [Open app](apps/achoo/index.html) · [Notes](apps/achoo/README.md) · [R source](apps/achoo/disease_problem.R) |
+| **Achoo!** — disease problem, frequentist tests, and Bayesian logistic regression | Ready | [Open app](apps/achoo/index.html) · [Notes](apps/achoo/README.md) · [R source](apps/achoo/disease_problem.R) |
 | **Beta Buds** — beta-binomial updating and prediction | Ready | [Open app](apps/beta-binomial/index.html) · [Notes](apps/beta-binomial/README.md) · [R source](apps/beta-binomial/beta_binomial_complete.R) |
 
 ## Folder layout
@@ -29,7 +29,7 @@ apps/
     index.html                  Achoo! browser entry point
     style.css                   App styles
     app.js                      Controls and plots
-    stats.js                    MacKay and frequentist calculations
+    stats.js                    Frequentist calculations
     brms.js                     brms posterior integration
     disease_problem.R           Original teaching example
     README.md                   Model details and app instructions

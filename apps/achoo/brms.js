@@ -21,7 +21,7 @@ function axis(n,y,size){
  return {rows,center,scale,logLikelihood,toU:eta=>.5+Math.atan((eta-center)/scale)/Math.PI};
 }
 function fit(nA,yA,nB,yB,size=512){
- if((yA===0&&yB===nB)||(yA===nA&&yB===0))return {available:false,reason:'The flat treatment-coefficient prior gives an improper posterior for completely separated groups (all cases in one group, none in the other). Posterior probabilities are undefined. MacKay’s proper priors still give a valid posterior.'};
+ if((yA===0&&yB===nB)||(yA===nA&&yB===0))return {available:false,reason:'The flat treatment-coefficient prior gives an improper posterior for completely separated groups (all cases in one group, none in the other). Posterior probabilities are undefined.'};
  const A=axis(nA,yA,size),B=axis(nB,yB,size),w=nB/(nA+nB),h=1/size;
  const prior=(a,b)=>1/(1+((1-w)*a+w*b)**2/18.75)**2;
  const marginalA=new Float64Array(size+1),marginalB=new Float64Array(size+1),tails=[];

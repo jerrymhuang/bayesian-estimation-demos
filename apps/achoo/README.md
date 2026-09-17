@@ -1,55 +1,49 @@
 # Achoo!
 
-An interactive, dependency-free browser demo of the disease problem in MacKay’s *Information Theory, Inference, and Learning Algorithms*, §37.1.
+An offline browser demo of the disease problem inspired by MacKay §37.1. All Bayesian results use the **brms logistic-regression model** from `disease_problem.R`. There is no prior-model selector or alternative Bayesian model.
 
-Open this folder’s `index.html` directly in a browser. From the project root, use `apps/achoo/index.html` or choose Achoo! from the root launcher. No installation, server, network connection, or R runtime is needed to use the app. For local HTTP serving, run `python3 -m http.server 8000` in this directory and visit http://localhost:8000.
+Open [index.html](index.html), or select Achoo! from the [project launcher](../../index.html). No installation or server is required. To serve the whole project locally, run `python3 -m http.server 8000` from the project root.
 
-Adjust the total number of participants (2–1,000), individual group sizes and disease counts, and the risk multiplier (1–20). The total slider uses a 3:1 allocation and preserves the disease rates from the most recent manual edit or reset, subject to integer rounding. Manual group sizes can use any allocation, subject to a combined maximum of 1,000. Reset restores the original A: 1/30 and B: 3/10 trial.
+## Controls and results
 
-The demo shows:
+Edit group sizes and disease counts, up to 1,000 participants total, and the risk multiplier from 1 to 20. The total slider uses a 3:1 allocation and preserves rates from the most recent manual edit/reset, subject to integer rounding. Reset restores A: 1/30 and B: 3/10.
 
-- A two-sided conditional Pearson test, Yates-corrected χ² test, and logistic regression Wald test.
-- P(pB > pA | data) and P(pB > k × pA | data).
-- A prior-model selector, a side-by-side posterior comparison table, and overlaid curves (MacKay solid/shaded, brms dashed).
-- Observed counts, observed risks, posterior means, and 95% equal-tailed credible intervals under the selected model.
-- Posterior density plots of pB − pA and pB − k × pA, with the positive region shaded.
+The app shows frequentist tests, posterior probabilities P(pB > pA | data) and P(pB > k pA | data), posterior risk means with 95% equal-tailed credible intervals, and density plots of pB − pA and pB − k pA. The positive region is shaded in each plot. “k times better” means the disease-risk ratio pB/pA exceeds k.
 
-## Model and relationship to the R script
+For the original trial, the brms posterior gives approximately:
 
-The browser follows the book’s independent uniform Beta(1, 1) priors on disease risks. With y disease cases among n participants, each posterior is Beta(y + 1, n − y + 1). Numerical integration gives deterministic results, including about **98.7431%** for A having lower risk and **58.1360%** for B having more than five times A’s risk in the original trial.
+- P(pB > pA): **98.6570%**.
+- P(pB > 5 pA): **70.1329%**.
+- Mean disease risk A: **4.3502%**; B: **31.0169%**.
 
-The **brms defaults** option integrates the posterior targeted by `disease_problem.R`, with priors verified using `get_prior()` and `make_stancode()` in installed brms 2.22.0:
+## Bayesian model
+
+Priors were verified with `get_prior()` and `make_stancode()` for `Disease ~ Group`, Bernoulli-logit, in installed brms 2.22.0:
 
 - Centered intercept: Student-t(df = 3, location = 0, scale = 2.5).
-- Treatment coefficient `GroupB`: improper flat prior on the real line.
+- GroupB coefficient: improper flat prior on the real line.
 
-Writing ηA = logit(pA), ηB = logit(pB), and w = nB/(nA+nB), the centered intercept is (1−w)ηA + wηB, and GroupB = ηB−ηA. The prior kernel in logit coordinates is `(1 + ((1-w)*etaA + w*etaB)^2 / 18.75)^-2`. The coordinate transformation has constant Jacobian one. This is **not** a Student-t prior on A’s uncentered log-odds. Changing the allocation changes the centered-intercept definition. The [brms documentation](https://paulbuerkner.com/brms/reference/set_prior.html) describes this convention.
+Let ηA = logit(pA), ηB = logit(pB), and w = nB/(nA+nB). The centered intercept is (1−w)ηA + wηB, and GroupB = ηB−ηA. The prior kernel in these logit coordinates is `(1 + ((1-w)*etaA + w*etaB)^2 / 18.75)^-2`, with constant coordinate-transformation Jacobian one. Changing the allocation changes how this prior acts on the risks. See the [brms prior documentation](https://paulbuerkner.com/brms/reference/set_prior.html).
 
-For the original trial, independent R integration gives:
+The browser uses deterministic numerical integration of the posterior targeted by the R script, not MCMC or exported draws. `brms.js` integrates unbounded logit axes using a tangent transformation, with 512 intervals per axis for interior counts. Boundary counts use 1,024 intervals and compare the normalizer against 512; relative disagreement above 0.2% withholds results. This is a convergence check, not a formal error bound.
 
-| Quantity | MacKay | brms defaults |
-| --- | ---: | ---: |
-| P(pB > pA) | 98.7431% | 98.6570% |
-| P(pB > 5 pA) | 58.1360% | 70.1329% |
-| Mean risk A | 6.2500% | 4.3502% |
-| Mean risk B | 33.3333% | 31.0169% |
+Completely separated groups (all cases in one, none in the other) give an improper posterior with these priors. Such results are explicitly unavailable. Very diffuse, unresolved posteriors are also withheld. Boundary density plots are omitted even when summaries are resolved because endpoint concentration is difficult to display reliably. There is no fallback model. Returning to supported counts restores the plots and summaries.
 
-The browser uses deterministic quadrature, not MCMC, and does not claim to reproduce individual draws or MCMC diagnostics. The original R files are unchanged.
+Density plots show the central posterior range; extreme tails can lie outside the axes. Probabilities integrate the full domain.
 
-The flat slope prior cannot be normalized, so it does not define a normalized joint prior on risks or a prior-predictive distribution. Completely separated groups (all cases in one, none in the other) give an improper posterior with these priors; the app explicitly withholds brms results. Other boundary counts can give proper but very diffuse posteriors.
+## Frequentist calculations
 
-`brms.js` integrates each logit using `eta = center + scale * tan(pi * (u - 0.5))`, covering the real line without a finite cutoff. The joint posterior includes the transformation Jacobians. Interior counts use 512 intervals per axis. Boundary counts use 1,024 and compare normalization with 512; a relative disagreement above 0.2% withholds results as numerically unresolved. This is a convergence check, not a formal error bound. Tail probabilities interpolate the conditional integrand within grid cells, and marginal CDFs give credible intervals. Boundary brms curves are omitted because their endpoint concentration makes simple density plots unreliable, even when summaries are resolved. MacKay remains available in every supported trial.
+The conditional Pearson test enumerates the fixed-margin reference distribution estimated by the script’s `chisq.test(..., simulate.p.value = TRUE)`. This is not the asymptotic uncorrected χ² test or Fisher’s probability-ordered exact test. The original data give p ≈ 0.04169; Yates correction gives p ≈ 0.06789. Logistic regression uses the two-sided Wald test for GroupB. Tests use α = 0.05; undefined tests and small expected counts are labeled.
 
-The conditional Pearson calculation enumerates the fixed-margin reference distribution that `chisq.test(..., simulate.p.value = TRUE)` estimates by simulation. It is not the asymptotic uncorrected χ² p-value or Fisher’s probability-ordered exact test. With the original data, it gives p ≈ 0.04169; Yates gives p ≈ 0.06789. A p-value is not a posterior probability. The app uses α = 0.05 and labels unidentifiable tests in degenerate tables.
+## Files and checks
 
-The density curves use numerical convolution and focus on the central posterior range. Extreme tails may lie outside the visible axes; displayed probabilities integrate the full parameter domain. “k times better” specifically means a disease-risk ratio pB/pA > k, not an odds ratio or a difference in recovery probabilities.
+- `app.js`: controls, summaries, and SVG plots.
+- `brms.js`: Bayesian posterior integration.
+- `stats.js`: frequentist tests, using log-gamma from `../../shared/beta.js`.
+- `index.html` and `style.css`: page content and layout.
+- `disease_problem.R`: unchanged original R example.
+- `tests/`: R references and regression checks.
 
-## Checks
+From the project root, run `node apps/achoo/tests/check.js` with Node and R installed. Tests check independent R posterior references, frequentist results, density normalization and shaded probability, input controls, reset, and improper/unresolved posterior states.
 
-From this folder, run `node tests/check.js` (or `node apps/achoo/tests/check.js` from the project root) with Node and base R (`Rscript`) installed. Checks compare probabilities, credible intervals, and frequentist results with R reference calculations, cover zero/all-case and very unbalanced trials, and exercise input handlers and SVG generation through a minimal DOM fixture. Additional checks compare brms probabilities and means with independent adaptive R quadrature, check density normalization and shaded probability, exercise model switching, and verify handling of improper or unresolved posteriors. Regenerate the reference fixture with `Rscript tests/brms-reference.R > tests/brms-reference.json` (requires `jsonlite`). These are not automated browser layout tests.
-
-Files: `index.html` (content), `style.css` (responsive styling), `stats.js` (MacKay and frequentist math), `brms.js` (logistic-posterior integration), `app.js` (controls and SVG charts).
-
-The original R source is alongside the app in [`disease_problem.R`](disease_problem.R). The shared book is in [`../../references/book.pdf`](../../references/book.pdf). Return to the [project overview](../../README.md).
-
-Beta PDF/CDF, quantile, and supporting routines are shared with Beta Buds in [`../../shared/beta.js`](../../shared/beta.js). Keep this relative folder layout when copying or serving the app.
+Regenerate the brms fixture from this folder with `Rscript tests/brms-reference.R > tests/brms-reference.json` (requires `jsonlite`). Shared reading: [MacKay’s book](../../references/book.pdf).
